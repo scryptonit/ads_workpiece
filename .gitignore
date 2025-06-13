@@ -1,0 +1,45 @@
+# ------------------------
+# System files
+.DS_Store
+
+# ------------------------
+# Virtual environments and bytecode
+.venv/
+__pycache__/
+*.pyc
+
+# ------------------------
+# PyCharm IDE settings
+.idea/
+
+# ------------------------
+# Environment config and secrets
+.env
+*.enc
+
+# ------------------------
+# Logs and temporary outputs
+logs/
+results/
+*.log
+
+# ------------------------
+# Sensitive config files — DO NOT COMMIT
+config/evm.txt
+config/proxies.txt
+config/rpc.txt
+
+# ------------------------
+# Push only example templates
+!config/evm_example.txt
+!config/proxies_example.txt
+!config/rpc_example.txt
+
+# ------------------------
+# Local wallet and profile bindings
+scripts/**/addresses.txt
+scripts/**/profiles.txt
+
+# Allow example versions
+!scripts/**/addresses_example.txt
+!scripts/**/profiles_example.txt
