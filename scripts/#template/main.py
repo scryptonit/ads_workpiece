@@ -7,6 +7,7 @@ from patchright.sync_api import sync_playwright
 from utils.adspower_api_utils import start_browser, close_browser
 from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success
+from utils.mouse_random_click import human_like_mouse_click
 
 
 ###########################################################################################
@@ -66,7 +67,7 @@ def activity(profile_number):
 
             page = context.new_page()
             ###########################################################################################
-            page.goto("https://bot.sannysoft.com/")
+            page.goto("https://opensea.io/")
             page.wait_for_load_state("load")
             # save_success(profile_number)
             ###########################################################################################
