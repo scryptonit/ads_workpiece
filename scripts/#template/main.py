@@ -3,15 +3,17 @@ import time
 import random
 import os
 from loguru import logger
-from patchright.sync_api import sync_playwright
+# from patchright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright
 from utils.adspower_api_utils import start_browser, close_browser
 from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success
 from utils.mouse_random_click import human_like_mouse_click
+from core.metamask_handler import auth_mm, confirm_mm
 
 
 ###########################################################################################
-DISPOSABLE = True
+DISPOSABLE = False # on/off disposable Ads-profile
 disp_N = 10  # number of disposable profiles
 T = 15  # seconds delay
 ###########################################################################################
@@ -22,21 +24,11 @@ def load_profiles(file_name="profiles.txt"):
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
-def click_random(locator, manual_radius: float = None):
-    time.sleep(random.uniform(1, 2))
-    locator.wait_for(state='visible', timeout=50000)
-    box = locator.bounding_box()
-    if box is None:
-        raise Exception("Bounding box not found")
-    width, height = box["width"], box["height"]
-    cx, cy = width / 2, height / 2
-    radius = manual_radius if manual_radius is not None else min(width, height) / 2
-    angle = random.uniform(0, 2 * math.pi)
-    r = radius * math.sqrt(random.uniform(0, 1))
-    rand_x = cx + r * math.cos(angle)
-    rand_y = cy + r * math.sin(angle)
-
-    locator.click(position={"x": rand_x, "y": rand_y})
+def close_other_pages(page, context):
+    time.sleep(2)
+    for pages in context.pages:
+        if pages.url != page.url:
+            pages.close()
 
 def activity(profile_number):
     try:
@@ -52,23 +44,34 @@ def activity(profile_number):
             return
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.connect_over_cdp(puppeteer_ws, slow_mo=random.randint(2000, 3000))
+            browser = playwright.chromium.connect_over_cdp(puppeteer_ws)
             context = browser.contexts[0] if browser.contexts else browser.new_context()
 
             context.add_init_script("""
-                Object.defineProperty(window, 'navigator', {
-                    value: new Proxy(navigator, {
-                        has: (target, key) => key === 'webdriver' ? false : key in target,
-                        get: (target, key) =>
-                            key === 'webdriver' ? undefined : typeof target[key] === 'function' ? target[key].bind(target) : target[key]
-                    })
-                });
-            """)
+                                        if (window.location.protocol.startsWith('http')) {
+                                            Object.defineProperty(window, 'navigator', {
+                                                value: new Proxy(navigator, {
+                                                    has: (target, key) => key === 'webdriver' ? false : key in target,
+                                                    get: (target, key) =>
+                                                        key === 'webdriver'
+                                                            ? undefined
+                                                            : typeof target[key] === 'function'
+                                                                ? target[key].bind(target)
+                                                                : target[key]
+                                                })
+                                            });
+                                        }
+                                        // если это страница расширения (chrome-extension://),
+                                        // то условие if не выполняется, и этот код просто игнорируется
+                                    """)
 
             page = context.new_page()
+            close_other_pages(page, context)
             ###########################################################################################
-            page.goto("https://opensea.io/")
+            # auth_mm(page, profile_number)
+            page.goto("https://...")
             page.wait_for_load_state("load")
+            time.sleep(random.uniform(3, 5))
             # save_success(profile_number)
             ###########################################################################################
             browser.close()
