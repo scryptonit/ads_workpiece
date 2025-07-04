@@ -3,8 +3,8 @@ import time
 import random
 import os
 from loguru import logger
-# from patchright.sync_api import sync_playwright
-from playwright.sync_api import sync_playwright
+from patchright.sync_api import sync_playwright
+# from playwright.sync_api import sync_playwright
 from utils.adspower_api_utils import start_browser, close_browser
 from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success
@@ -13,6 +13,7 @@ from core.metamask_handler import auth_mm, confirm_mm
 
 
 ###########################################################################################
+HEADLESS_NEW = True
 DISPOSABLE = False # on/off disposable Ads-profile
 disp_N = 10  # number of disposable profiles
 T = 15  # seconds delay
@@ -38,7 +39,7 @@ def activity(profile_number):
             logger.info(f"[SKIP] Profile {profile_number} already processed.")
             return
 
-        puppeteer_ws = start_browser(profile_number)
+        puppeteer_ws = start_browser(profile_number, headless = HEADLESS_NEW)
         if not puppeteer_ws:
             logger.error(f"Failed to launch browser for profile {profile_number}.")
             return
