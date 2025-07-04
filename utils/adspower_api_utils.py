@@ -4,7 +4,7 @@ from loguru import logger
 from config.settings import ADSPOWER_API_URL
 
 
-def start_browser(profile_number: str) -> str | None:
+def start_browser(profile_number: str, headless: bool = False) -> str | None:
     launch_args = [
         "--disable-blink-features=AutomationControlled",
         "--disable-popup-blocking",
@@ -16,6 +16,8 @@ def start_browser(profile_number: str) -> str | None:
         'launch_args': json.dumps(launch_args),
         'open_tabs': 1
     }
+    if headless:
+        params['headless'] = 1
 
     try:
         response = requests.get(f'{ADSPOWER_API_URL}/api/v1/browser/start', params=params)
