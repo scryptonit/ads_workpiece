@@ -9,6 +9,7 @@ from utils.adspower_api_utils import start_browser, close_browser
 from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success
 from utils.mouse_random_click import human_like_mouse_click
+from utils.human_type import human_like_type
 from core.metamask_handler import auth_mm, confirm_mm
 
 
@@ -47,25 +48,6 @@ def activity(profile_number):
         with sync_playwright() as playwright:
             browser = playwright.chromium.connect_over_cdp(puppeteer_ws)
             context = browser.contexts[0] if browser.contexts else browser.new_context()
-
-            context.add_init_script("""
-                                        if (window.location.protocol.startsWith('http')) {
-                                            Object.defineProperty(window, 'navigator', {
-                                                value: new Proxy(navigator, {
-                                                    has: (target, key) => key === 'webdriver' ? false : key in target,
-                                                    get: (target, key) =>
-                                                        key === 'webdriver'
-                                                            ? undefined
-                                                            : typeof target[key] === 'function'
-                                                                ? target[key].bind(target)
-                                                                : target[key]
-                                                })
-                                            });
-                                        }
-                                        // если это страница расширения (chrome-extension://),
-                                        // то условие if не выполняется, и этот код просто игнорируется
-                                    """)
-
             page = context.new_page()
             close_other_pages(page, context)
             ###########################################################################################
