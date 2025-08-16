@@ -3,9 +3,9 @@ import sys
 import time
 from typing import Literal
 from playwright.sync_api import Locator, Page, Keyboard
+from utils.mouse_random_click import human_like_mouse_click
 
 from loguru import logger
-
 
 IS_MAC = sys.platform == "darwin"
 
@@ -136,7 +136,7 @@ def human_like_type(
         try:
             locator.wait_for(state="visible", timeout=10000)
             if focus_with_click:
-                human_like_mouse_click(locator)
+                locator.click()
             else:
                 locator.focus()
 
@@ -193,7 +193,7 @@ def human_like_type(
         locator.wait_for(state="visible", timeout=10000)
 
         if focus_with_click:
-            locator.click()  # TODO заменить на свой "человеческий" клик
+            human_like_mouse_click(locator)  # TODO заменить на свой "человеческий" клик
         else:
             locator.focus()
 
