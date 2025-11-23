@@ -14,7 +14,7 @@ from core.metamask_handler import auth_mm, confirm_mm
 
 
 ###########################################################################################
-HEADLESS_NEW = True
+HEADLESS_NEW = False
 DISPOSABLE = False # on/off disposable Ads-profile
 disp_N = 10  # number of disposable profiles
 T = 15  # seconds delay
