@@ -13,3 +13,7 @@ def load_successful_profiles():
 def save_success(profile_number):
     with open(results_filename, "a", encoding="utf-8") as f:
         f.write(f"{profile_number}:1\n")
+
+def save_success_wallets(wallet_addr):
+    with open(results_filename, "a", encoding="utf-8") as f:
+        f.write(f"{wallet_addr}:1\n")
