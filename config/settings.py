@@ -15,6 +15,7 @@ ADSPOWER_API_URL = os.getenv("ADSPOWER_API_URL", "http://localhost:50325")
 ENCRYPTED_WALLETS_PATH = os.getenv("ENCRYPTED_WALLETS_PATH")
 WALLET_SOURCE = os.getenv("WALLET_SOURCE", "keychain").strip().lower()
 WALLET_KEY_PATH = os.getenv("WALLET_KEY_PATH")
+DISPOSABLE_PROFILE_ID = os.getenv("DISPOSABLE_PROFILE_ID", "999")
 
 # -------------------------
 # Логирование через loguru
