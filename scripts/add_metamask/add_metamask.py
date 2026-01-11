@@ -1,4 +1,4 @@
-# WORKS WITH METAMASK v13.1
+# WORKS WITH METAMASK v13.13
 import time
 import random
 import os
