@@ -1,3 +1,4 @@
+# WORKS WITH METAMASK v13.1
 import time
 import random
 import os
