@@ -5,20 +5,21 @@ import os
 from loguru import logger
 from patchright.sync_api import sync_playwright,expect
 # from playwright.sync_api import sync_playwright
-from utils.adspower_api_utils import start_browser, close_browser
+from utils.adspower_api_utils import start_browser, close_browser, clear_profile_data
 from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success, save_success_wallets
 from utils.mouse_random_click import human_like_mouse_click
 from utils.human_type import human_like_type
-from core.metamask_handler import auth_mm, confirm_mm
+from core.metamask_handler import auth_mm, auth_mm_disp, confirm_mm
+from config.settings import DISPOSABLE_PROFILE_ID
 
 
 ###########################################################################################
 HEADLESS_NEW = False
 DISPOSABLE = True # on/off disposable Ads-profile
-DISPOSABLE_PROFILE_ID = '5'
-disp_N = 10  # number of disposable profiles
+disp_N = 5  # number of disposable profiles
 T = 15  # seconds delay
+SHUFFLE_WALLETS = True  # randomize processing wallets/profiles
 ###########################################################################################
 
 def load_profiles(file_name="profiles.txt"):
@@ -32,11 +33,14 @@ def load_wallets_from_file(file_name="addresses.txt"):
     file_path = os.path.join(base_dir, file_name)
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
-def close_other_pages(page, context):
+def close_other_pages(keep_page, context):
     time.sleep(2)
-    for pages in context.pages:
-        if pages.url != page.url:
-            pages.close()
+    for p in list(context.pages):
+        if p is not keep_page and not p.is_closed():
+            try:
+                p.close()
+            except Exception:
+                pass
 
 def activity(profile_number, wallet_addr):
     try:
@@ -51,6 +55,11 @@ def activity(profile_number, wallet_addr):
                 logger.info(f"[SKIP] Профиль {profile_number} уже обработан.")
                 return
 
+        if DISPOSABLE:
+            close_browser(profile_number)
+            time.sleep(1.1)
+            clear_profile_data(profile_number)
+            time.sleep(1.1)
         puppeteer_ws = start_browser(profile_number, headless = HEADLESS_NEW)
         if not puppeteer_ws:
             logger.error(f"Failed to launch browser for profile {profile_number}.")
@@ -61,12 +70,12 @@ def activity(profile_number, wallet_addr):
             context = browser.contexts[0] if browser.contexts else browser.new_context()
             page = context.new_page()
             close_other_pages(page, context)
+            time.sleep(1.1)
             ###########################################################################################
-            # auth_mm(page, profile_number)
-            page.goto("https://...")
+            # auth_mm_disp(page, wallet_addr) if DISPOSABLE else auth_mm(page, profile_number)
+            page.goto(
+                "https://...")
             page.wait_for_load_state("load")
-            time.sleep(random.uniform(5, 10))
-
 
             
             success_text = ""
@@ -81,6 +90,7 @@ def activity(profile_number, wallet_addr):
                     logger.success(f"Success for profile {profile_number}")
 
             ###########################################################################################
+            
             browser.close()
             time.sleep(random.uniform(T * 0.85, T * 1.15))
 
@@ -96,10 +106,14 @@ def activity(profile_number, wallet_addr):
 if __name__ == "__main__":
     wallets_to_process = load_wallets_from_file("addresses.txt")
     if DISPOSABLE:
+        if SHUFFLE_WALLETS:
+            random.shuffle(wallets_to_process)
         for wallet in wallets_to_process:
             activity(DISPOSABLE_PROFILE_ID, wallet)
     else:
         profiles = load_profiles("profiles.txt")
-        for i, profile in enumerate(profiles):
-            if i < len(wallets_to_process):
-                activity(profile, wallets_to_process[i])
+        profile_wallet_pairs = list(zip(profiles, wallets_to_process))
+        if SHUFFLE_WALLETS:
+            random.shuffle(profile_wallet_pairs)
+        for profile, wallet in profile_wallet_pairs:
+            activity(profile, wallet)
