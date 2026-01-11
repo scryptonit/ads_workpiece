@@ -1,4 +1,3 @@
-import math
 import time
 import random
 import os
@@ -9,11 +8,6 @@ from core.get_metamask_password import derive_password
 from core.result_tracker import load_successful_profiles, save_success
 from get_seed import get_address_and_seed_for_profile
 
-###########################################################################################
-DISPOSABLE = False
-disp_N = 10  # number of disposable profiles
-T = 1  # seconds delay
-###########################################################################################
 
 def load_profiles(file_name="profiles.txt"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,21 +15,14 @@ def load_profiles(file_name="profiles.txt"):
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
-def click_random(locator, manual_radius: float = None):
-    time.sleep(random.uniform(1, 2))
-    locator.wait_for(state='visible', timeout=50000)
-    box = locator.bounding_box()
-    if box is None:
-        raise Exception("Bounding box not found")
-    width, height = box["width"], box["height"]
-    cx, cy = width / 2, height / 2
-    radius = manual_radius if manual_radius is not None else min(width, height) / 2
-    angle = random.uniform(0, 2 * math.pi)
-    r = radius * math.sqrt(random.uniform(0, 1))
-    rand_x = cx + r * math.cos(angle)
-    rand_y = cy + r * math.sin(angle)
-
-    locator.click(position={"x": rand_x, "y": rand_y})
+def close_other_pages(keep_page, context):
+    time.sleep(2)
+    for p in list(context.pages):
+        if p is not keep_page and not p.is_closed():
+            try:
+                p.close()
+            except Exception:
+                pass
 
 def activity(profile_number):
     try:
@@ -54,50 +41,42 @@ def activity(profile_number):
             browser = playwright.chromium.connect_over_cdp(puppeteer_ws, slow_mo=random.randint(1000, 1500))
             context = browser.contexts[0] if browser.contexts else browser.new_context()
 
-            context.add_init_script("""
-                Object.defineProperty(window, 'navigator', {
-                    value: new Proxy(navigator, {
-                        has: (target, key) => key === 'webdriver' ? false : key in target,
-                        get: (target, key) =>
-                            key === 'webdriver' ? undefined : typeof target[key] === 'function' ? target[key].bind(target) : target[key]
-                    })
-                });
-            """)
 
             page = context.new_page()
+            close_other_pages(page, context)
+
             page.goto("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html")
             page.wait_for_load_state("load")
-            page.get_by_role('checkbox').click()
             page.get_by_test_id('onboarding-import-wallet').click()
-            page.get_by_test_id('metametrics-i-agree').click()
+            page.get_by_test_id('onboarding-import-with-srp-button').click()
 
             addr, seed = get_address_and_seed_for_profile(profile_number)
-            seed_words = seed.split()
-            for i, word in enumerate(seed_words):
-                page.get_by_test_id(f'import-srp__srp-word-{i}').fill(word)
+            seed_textbox = page.get_by_test_id("srp-input-import__srp-note")
+            seed_textbox.click()
+            page.keyboard.type(seed, delay=40)
 
             page.get_by_test_id('import-srp-confirm').click()
 
             password = derive_password(profile_number)
-            page.get_by_test_id('create-password-new').fill(password)
-            page.get_by_test_id('create-password-confirm').fill(password)
+            page.get_by_test_id('create-password-new-input').fill(password)
+            page.get_by_test_id('create-password-confirm-input').fill(password)
             page.get_by_role('checkbox').click()
-            page.get_by_test_id('create-password-import').click()
+            page.get_by_test_id('create-password-submit').click()
+            page.get_by_role('checkbox').first.click()
+
+            page.get_by_test_id('metametrics-i-agree').click()
             page.get_by_test_id('onboarding-complete-done').click()
-            page.get_by_test_id('pin-extension-next').click()
-            page.get_by_test_id('pin-extension-done').click()
 
-            if page.get_by_test_id('not-now-button').count():
-                page.get_by_test_id('not-now-button').click()
+            page.goto("chrome-extension://nkbihfbeogaeaoehlefnkodbefgpgknn/home.html")
+            page.get_by_test_id('eth-overview-receive').click()
 
-            if addr[:7] == page.get_by_test_id('app-header-copy-button').inner_text()[:7]:
+            if addr[:7] == page.get_by_test_id('multichain-address-row-address').first.inner_text()[:7]:
                 save_success(profile_number)
                 logger.success(f"[OK] Profile {profile_number} successfully imported to MetaMask.")
             else:
                 logger.warning(f"[CHECK] Address verification failed for profile {profile_number}.")
 
             browser.close()
-            time.sleep(random.uniform(T * 0.85, T * 1.15))
 
     except Exception as e:
         logger.error(f"Error for profile {profile_number}: {e}")
@@ -110,9 +89,6 @@ def activity(profile_number):
 
 
 if __name__ == "__main__":
-    if DISPOSABLE:
-        profiles = ['5'] * disp_N
-    else:
-        profiles = load_profiles("profiles.txt")
+    profiles = load_profiles("profiles.txt")
     for profile in profiles:
         activity(profile)
