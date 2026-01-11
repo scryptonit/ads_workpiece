@@ -16,6 +16,7 @@ Ideal for Web3 farming, testnets, activity automation, and seamless integration 
 - 📄 Logging via `loguru`
 - 🔌 Works through local AdsPower API
 - 🧰 Modular structure ready for future dApps and automation scripts
+- MetaMask v13.13
 
 ---
 
