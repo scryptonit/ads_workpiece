@@ -165,7 +165,6 @@ def activity(profile_number, wallet_addr, email=None, email_password=None):
 
             ###########################################################################################
 
-            ###########################################################################################
             def cap_guru_ext():
                 if is_step_success(profile_number, "chrome_extension"): return
                 api_token = ''
@@ -205,11 +204,8 @@ def activity(profile_number, wallet_addr, email=None, email_password=None):
                 page.wait_for_load_state("load")
                 time.sleep(3)
                 if "login" in page.url:
-                    page.evaluate(f"""
-                                        () => {{
-                                            localStorage.setItem('token', JSON.stringify("{discord_token}"));
-                                        }}
-                                    """)
+                    page.evaluate("""token => { localStorage.setItem('token', JSON.stringify(token)); }""", discord_token)
+                                    
                     page.reload()
                     page.wait_for_load_state("load")
                     time.sleep(3)
