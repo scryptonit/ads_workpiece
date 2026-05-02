@@ -1,6 +1,7 @@
 import time
 import re
 from datetime import datetime, timedelta, timezone
+from html import unescape
 from typing import Optional, Pattern
 
 import requests
@@ -25,6 +26,18 @@ def _build_code_re(code_len: int = 6, code_charset: str = ALNUM) -> Pattern[str]
     raise ValueError(f"Unsupported code_charset: {code_charset!r}. Use '{DIGITS}' or '{ALNUM}'")
 
 
+def _build_link_re(link_mask: str | Pattern[str]) -> Pattern[str]:
+    if hasattr(link_mask, "search"):
+        return link_mask
+    escaped = re.escape(link_mask)
+    return re.compile(rf"({escaped}[^\s\"'<>]*)")
+
+
+def _match_text(match) -> str:
+    value = match.group(1) if match.lastindex else match.group(0)
+    return unescape(value).strip().strip("\"'<>")
+
+
 def _parse_mailtm_dt(value: object) -> Optional[datetime]:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -42,6 +55,27 @@ def _parse_mailtm_dt(value: object) -> Optional[datetime]:
 
 def _message_dt(message: dict) -> Optional[datetime]:
     return _parse_mailtm_dt(message.get("createdAt")) or _parse_mailtm_dt(message.get("updatedAt"))
+
+
+def _message_text(message: dict) -> str:
+    parts = []
+
+    intro = message.get("intro")
+    if isinstance(intro, str) and intro.strip():
+        parts.append(intro)
+
+    subject = message.get("subject")
+    if isinstance(subject, str) and subject.strip():
+        parts.append(subject)
+
+    for k in ("text", "html"):
+        v = message.get(k)
+        if isinstance(v, list):
+            parts.extend([x for x in v if isinstance(x, str) and x.strip()])
+        elif isinstance(v, str) and v.strip():
+            parts.append(v)
+
+    return "\n\n".join(parts)
 
 
 def get_mailtm_token(email: str, password: str) -> str:
@@ -110,27 +144,66 @@ def wait_email_code_by_token(
             r.raise_for_status()
             msg = r.json()
 
-            parts = []
-
-            intro = msg.get("intro")
-            if isinstance(intro, str) and intro.strip():
-                parts.append(intro)
-
-            subject = msg.get("subject")
-            if isinstance(subject, str) and subject.strip():
-                parts.append(subject)
-
-            for k in ("text", "html"):
-                v = msg.get(k)
-                if isinstance(v, list):
-                    parts.extend([x for x in v if isinstance(x, str) and x.strip()])
-                elif isinstance(v, str) and v.strip():
-                    parts.append(v)
-
-            text = "\n\n".join(parts)
-            mcode = code_re.search(text)
+            mcode = code_re.search(_message_text(msg))
             if mcode:
                 return mcode.group(0)
+
+        time.sleep(poll_s)
+
+    return None
+
+
+def wait_email_link_by_token(
+    token: str,
+    link_mask: str | Pattern[str],
+    timeout_s: int = 180,
+    poll_s: float = 3.0,
+    max_message_age_min: Optional[int] = 15,
+) -> Optional[str]:
+    s = requests.Session()
+    s.headers.update({"User-Agent": "temp-mailtm/1.0"})
+    headers = {"Authorization": f"Bearer {token}"}
+    link_re = _build_link_re(link_mask)
+
+    seen = set()
+    t0 = time.time()
+
+    while time.time() - t0 < timeout_s:
+        r = s.get(f"{MAILTM}/messages", headers=headers, timeout=20)
+        r.raise_for_status()
+        msgs = r.json().get("hydra:member") or []
+
+        if max_message_age_min is not None:
+            now_utc = datetime.now(timezone.utc)
+            max_age = timedelta(minutes=max_message_age_min)
+            filtered_msgs = []
+            for m in msgs:
+                msg_dt = _message_dt(m)
+                if msg_dt is None:
+                    continue
+                if now_utc - msg_dt <= max_age:
+                    filtered_msgs.append(m)
+            msgs = filtered_msgs
+
+        msgs = sorted(
+            msgs,
+            key=lambda m: _message_dt(m) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+
+        for m in msgs:
+            mid = m.get("id")
+            if not mid or mid in seen:
+                continue
+            seen.add(mid)
+
+            r = s.get(f"{MAILTM}/messages/{mid}", headers=headers, timeout=20)
+            r.raise_for_status()
+            msg = r.json()
+
+            mlink = link_re.search(_message_text(msg))
+            if mlink:
+                return _match_text(mlink)
 
         time.sleep(poll_s)
 
@@ -154,6 +227,25 @@ def get_email_code(
         timeout_s=timeout_s,
         poll_s=poll_s,
         code_re=code_re,
+        max_message_age_min=max_message_age_min,
+    )
+
+
+def get_email_link(
+    email: str,
+    password: str,
+    link_mask: str | Pattern[str],
+    *,
+    timeout_s: int = 180,
+    poll_s: float = 3.0,
+    max_message_age_min: Optional[int] = 15,
+) -> Optional[str]:
+    token = get_mailtm_token(email, password)
+    return wait_email_link_by_token(
+        token,
+        link_mask,
+        timeout_s=timeout_s,
+        poll_s=poll_s,
         max_message_age_min=max_message_age_min,
     )
 
