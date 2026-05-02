@@ -12,11 +12,11 @@ from utils.mouse_random_click import human_like_mouse_click
 from utils.human_type import human_like_type
 from core.metamask_handler import auth_mm, auth_mm_disp, confirm_mm
 from config.settings import DISPOSABLE_PROFILE_ID
-from core.get_email_code import get_email_code
-
+from core.get_email_code import get_email_code, get_email_link
+from core.get_imap_email_code import get_email_imap_code, get_email_imap_link
 ###########################################################################################
 HEADLESS_NEW = False
-DISPOSABLE = True  # on/off disposable Ads-profile
+DISPOSABLE = False  # on/off disposable Ads-profile
 disp_N = 5  # number of disposable profiles
 T = 15  # seconds delay
 SHUFFLE_WALLETS = True  # randomize processing wallets/profiles
@@ -95,7 +95,7 @@ def activity(profile_number, wallet_addr, email=None, email_password=None):
             ###########################################################################################
             # auth_mm_disp(page, wallet_addr) if DISPOSABLE else auth_mm(page, profile_number)
             page.goto(
-                "https://...")
+                "https://")
             page.wait_for_load_state("load")
 
             success_text = ""
