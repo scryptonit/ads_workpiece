@@ -34,6 +34,8 @@ def load_profiles(file_name="profiles.txt"):
 def load_wallets_from_file(file_name="addresses.txt"):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, file_name)
+    if not os.path.exists(file_path):
+        return []
     with open(file_path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
@@ -42,6 +44,8 @@ def load_email_accounts(file_name="email.txt"):
     file_path = os.path.join(base_dir, file_name)
 
     accounts = []
+    if not os.path.exists(file_path):
+        return accounts
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -125,6 +129,11 @@ def activity(profile_number, wallet_addr, email=None, email_password=None):
 
 
 if __name__ == "__main__":
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    for fname in ("profiles.txt", "addresses.txt", "accounts.txt", "email.txt"):
+        if not os.path.exists(os.path.join(base_dir, fname)):
+            logger.warning(f"[FILE MISSING] {fname}")
+
     wallets_to_process = load_wallets_from_file("addresses.txt")
 
     if DISPOSABLE:
@@ -151,20 +160,18 @@ if __name__ == "__main__":
         profiles = load_profiles("profiles.txt")
         regular_accounts = load_email_accounts("accounts.txt")
 
-        min_len = min(len(profiles), len(wallets_to_process), len(regular_accounts))
-        if min_len == 0:
-            logger.error("Empty input file(s)")
+        if not profiles:
+            logger.error("profiles.txt is empty")
             raise SystemExit(1)
 
-        if len(profiles) != len(wallets_to_process) or len(profiles) != len(regular_accounts):
-            logger.warning(
-                f"Length mismatch: profiles={len(profiles)}, wallets={len(wallets_to_process)}, accounts={len(regular_accounts)}. "
-                f"Will process first {min_len} rows by index."
-            )
-
         items = [
-            (profiles[i], wallets_to_process[i], regular_accounts[i][0], regular_accounts[i][1])
-            for i in range(min_len)
+            (
+                profiles[i],
+                wallets_to_process[i] if i < len(wallets_to_process) else None,
+                regular_accounts[i][0] if i < len(regular_accounts) else None,
+                regular_accounts[i][1] if i < len(regular_accounts) else None,
+            )
+            for i in range(len(profiles))
         ]
 
         if SHUFFLE_WALLETS:
