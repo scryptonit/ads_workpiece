@@ -17,6 +17,13 @@ WALLET_SOURCE = os.getenv("WALLET_SOURCE", "keychain").strip().lower()
 WALLET_KEY_PATH = os.getenv("WALLET_KEY_PATH")
 DISPOSABLE_PROFILE_ID = os.getenv("DISPOSABLE_PROFILE_ID", "999")
 
+# OpenAI / GPT
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+# 2Captcha (captcha solver)
+TWOCAPTCHA_API_KEY = os.getenv("TWOCAPTCHA_API_KEY")
+
 # -------------------------
 # Логирование через loguru
 # -------------------------
