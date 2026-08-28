@@ -13,13 +13,13 @@ def _get_client() -> OpenAI:
     return _client
 
 
-def ask(prompt: str, *, model: str | None = None, max_tokens: int = 100) -> str | None:
+def ask(prompt: str, *, model: str | None = None, max_tokens: int = 100, temperature: float = 0.0) -> str | None:
     try:
         r = _get_client().chat.completions.create(
             model=model or OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.0,
+            temperature=temperature,
         )
         return r.choices[0].message.content.strip()
     except Exception as e:
