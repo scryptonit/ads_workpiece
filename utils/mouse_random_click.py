@@ -270,9 +270,16 @@ def human_like_mouse_click(locator, time_sleep: float = TIME_SLEEP_DEFAULT, spee
         for attempt in range(max_attempts):
             element_info = None
             try:
-                element_info = locator.bounding_box(timeout=300)
+                element_info = locator.bounding_box(timeout=2000)
             except Exception as e_bb:
-                logger.trace(f"HumanScroll: BBox not found attempt {attempt + 1}: {e_bb}")
+                logger.warning(f"HumanScroll: BBox not found attempt {attempt + 1}: {e_bb}")
+                try:
+                    matched = locator.count()
+                except Exception:
+                    matched = -1
+                if matched != 1:
+                    logger.error(f"HumanScroll: locator matched {matched} elements, aborting instead of scrolling.")
+                    return False
 
             if element_info:
                 el_y, el_h = element_info["y"], element_info["height"]
